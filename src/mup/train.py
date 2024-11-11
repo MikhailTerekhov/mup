@@ -20,6 +20,7 @@ def main(args):
     model_cfg = Config(
         debug=False,
         apply_muP=args.apply_muP,
+        fix_layernorm=args.fix_layernorm,
         d_head=args.d_head,
         d_model=args.width,
         d_mlp=args.width * 4,
@@ -33,6 +34,10 @@ def main(args):
         d_vocab=50257  # GPT2 vocab size
     )
 
+    wandb_name = f"{args.wandb_run_prefix}_width_{args.width}_{'muP' if args.apply_muP else 'std'}"
+    if args.fix_layernorm:
+        wandb_name += "+fixLN"
+    wandb_name += f"_lr_{args.lr}"
     # Prepare training arguments
     training_args = TransformerTrainingArgs(
         epochs=args.epochs,
@@ -42,7 +47,8 @@ def main(args):
         batch_size=args.batch_size,
         max_steps_per_epoch=args.max_steps_per_epoch,
         wandb_project=args.wandb_project,
-        wandb_name=f"{args.wandb_run_prefix}_width_{args.width}_{'muP' if args.apply_muP else 'std'}_lr_{args.lr}",
+        # wandb_name=f"{args.wandb_run_prefix}_width_{args.width}_{'muP' if args.apply_muP else 'std'}_lr_{args.lr}",
+        wandb_name=wandb_name,
         collect_norms=args.collect_norms,
     )
 
@@ -75,6 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("--collect_norms", action="store_true", help="Whether to collect layer norms data.")
     parser.add_argument("--wandb_project", type=str, default="mup-transformer-training", help="The W&B project name.")
     parser.add_argument("--wandb_run_prefix", type=str, default="transformer_traintest", help="Prefix for the W&B run name.")
+    parser.add_argument('--fix_layernorm', action='store_true', help='Fix the layer norm params as suggested by u-mup.')
 
     args = parser.parse_args()
 

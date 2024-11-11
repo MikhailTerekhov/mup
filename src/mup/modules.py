@@ -11,13 +11,14 @@ class LayerNorm(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
-        self.w = nn.Parameter(t.ones(cfg.d_model))
-        self.b = nn.Parameter(t.zeros(cfg.d_model))
-    
+        self.w = nn.Parameter(t.ones(cfg.d_model), requires_grad=not cfg.fix_layernorm)
+        self.b = nn.Parameter(t.zeros(cfg.d_model), requires_grad=not cfg.fix_layernorm)
+
     def forward(self, residual):
         residual_mean = residual.mean(dim=-1, keepdim=True)
         residual_std = (residual.var(dim=-1, keepdim=True, unbiased=False) + self.cfg.layer_norm_eps).sqrt()
         residual = (residual - residual_mean) / residual_std
+        # print("wb means:", self.w.mean().item(), self.b.mean().item())
         return residual * self.w + self.b
 
 class Embed(nn.Module):

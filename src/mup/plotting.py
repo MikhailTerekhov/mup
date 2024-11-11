@@ -49,11 +49,10 @@ def get_tags(name):
     lr=tags[lr_index]
     dim=tags[dim_index]
     mup=tags[mup_index]
-    return (mup=="muP", dim, lr)
+    return (mup, dim, lr)
 
 def plot_coord_summaries(history_dict, steps=range(0,10)):
     norm_cols = [col for col in next(iter(history_dict.values())).columns if "norm" in col]
-    fig,axs = plt.subplots(2,len(norm_cols), figsize=(30,10))
     dfs=[]
     lrs = []
     for run_name in history_dict:
@@ -67,15 +66,25 @@ def plot_coord_summaries(history_dict, steps=range(0,10)):
         lrs.append(lr)
         dfs.append(run_df)
     df = pd.concat(dfs)
+    mups = df["muP"].unique()
+
+    print(f"norm_cols: {norm_cols} lr: {lrs} mups: {mups}")
+    fig,axs = plt.subplots(len(mups),len(norm_cols), figsize=(30,10))
+
     lr_to_plot = sorted(list(set(lrs)))[len(set(lrs))//2]
     for i, col in enumerate(norm_cols):
-        for j, mup in enumerate([True,False]):
+        for j, mup in enumerate(mups):
             for k in steps:
-                axs[j,i].set_title(col + " - " + ("muP" if mup else "standard"))
+                axs[j,i].set_title(col + " - " + mup)
                 axs[j,i].set_xlabel("width")
                 axs[j,i].set_ylabel("abs(out).mean()")
-                df[(df["lr"]==lr_to_plot)&(df["muP"]==mup) & (df["_step"]==k) ].plot(x="width", y=col, ax=axs[j,i], label=f"{k}", marker="o", logy=True)
+                data = df[(df["lr"]==lr_to_plot) & (df["muP"]==mup) & (df["_step"]==k) ]
+                if not data.empty:
+                    data.plot(x="width", y=col, ax=axs[j,i], label=f"{k}", marker="o", logy=True)
         plt.tight_layout()
+
+
+# todo mup tag is not boolean anymore -- fix plotting below
 
 def plot_val_accuracy(wandb_df):
     fig, axs = plt.subplots(1, 2, figsize=(14, 6))
@@ -158,3 +167,11 @@ def plot_losses(wandb_df):
     #axs[1][1].set_ylim(4, 13)
     axs[1][1].legend()
     plt.tight_layout()
+
+
+
+if __name__ == '__main__':
+    history_dict = get_wandb_history_logs("claire-labo", "mup-transformer-coordcheck")
+    # Coordinate check
+    plot_coord_summaries(history_dict, steps=range(0, 10))
+    plt.show()

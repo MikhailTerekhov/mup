@@ -103,18 +103,19 @@ class TransformerTrainer:
         accuracy = np.nan
 
 
-        progress_bar = tqdm(total = self.args.epochs)
+        progress_bar = tqdm(total=self.args.epochs)
 
+        num_batches = len(self.train_loader())
         for epoch in range(self.args.epochs):
             for i, batch in enumerate(self.train_loader()):
                 loss = self.training_step(batch)
                 
-                progress_bar.set_description(f"Epoch {epoch+1}, loss: {loss:.3f}, accuracy: {accuracy:.3f}")
-                if self.args.max_steps_per_epoch>0 and i >= self.args.max_steps_per_epoch:
+                progress_bar.set_description(f"Epoch {epoch+1} batch {i+1}/{num_batches} loss: {loss:.3f}, accuracy: {accuracy:.3f}")
+                if self.args.max_steps_per_epoch > 0 and i >= self.args.max_steps_per_epoch:
                     break
             val_results = [self.validation_step(batch) for batch in self.val_loader()]
             progress_bar.update()
-            correct_predictions = t.concat([batch_res[0]for batch_res in val_results])
+            correct_predictions = t.concat([batch_res[0] for batch_res in val_results])
             losses = t.concat([batch_res[1].reshape(1) for batch_res in val_results])
             accuracy = correct_predictions.float().mean().item()
             val_loss = losses.mean().item()
