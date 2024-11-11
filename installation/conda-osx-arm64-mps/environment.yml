@@ -1,4 +1,4 @@
-name: template-project-name
+name: mup
 channels:
   - conda-forge
 dependencies:
