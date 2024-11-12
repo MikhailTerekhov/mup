@@ -213,7 +213,7 @@ class DemoTransformer(nn.Module):
         pass
 
     def configure_optimizers(self, weight_decay, learning_rate, betas=(0.9, 0.999), fix_embed_lr=False,
-                             fix_weight_decay=False, base_lr=1e-3):
+                             fix_embed_alt=False, fix_weight_decay=False, base_lr=1e-3):
         if self.cfg.apply_muP:
             def get_wd(lr):
                 return weight_decay * base_lr / lr if fix_weight_decay else weight_decay
@@ -222,8 +222,12 @@ class DemoTransformer(nn.Module):
             decay_params = []
             nodecay_params = []
 
-            embed_lr = learning_rate / sqrt(
-                self.cfg.muP_width_multiplier) if fix_embed_lr else learning_rate / self.cfg.muP_width_multiplier
+            if fix_embed_lr:    # the way suggested by u-mup
+                embed_lr = learning_rate / sqrt(self.cfg.muP_width_multiplier)
+            elif fix_embed_alt: # makes the coord check better but u-mup suggests that worse generalization
+                embed_lr = learning_rate
+            else:               # the buggy implementation we had
+                embed_lr = learning_rate / self.cfg.muP_width_multiplier
             decay_params.extend([self.embed.W_E, self.pos_embed.W_pos, self.unembed.W_U])
             for block in self.blocks:
                 mup_decay_params.extend([
