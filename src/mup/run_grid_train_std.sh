@@ -18,12 +18,3 @@ for lr in "${muP_learning_rates[@]}"; do
     python train.py --lr $lr --width $width --wandb_project $wandb_project --wandb_run_prefix $wandb_run_prefix
   done
 done
-
-# Loop over the learning rates
-for lr in "${muP_learning_rates[@]}"; do
-  # Loop over the widths
-  for width in "${widths[@]}"; do
-    # Run the Python script with the current configuration
-    python train.py --lr $lr --width $width --wandb_project $wandb_project --wandb_run_prefix $wandb_run_prefix --apply_muP
-  done
-done
