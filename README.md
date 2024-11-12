@@ -1,6 +1,3 @@
-> [!IMPORTANT]
-
-
 # Small-scale experiments with muP and autoregressive transformers
 ## Overview
 This code provides a configurable implementation of muP with some of the tweaks proposed by [EleutherAI](https://blog.eleuther.ai/mutransfer/) and some of the tweaks taken from [unit-scale muP](https://arxiv.org/abs/2407.17465).
@@ -16,6 +13,8 @@ You will need to zoom into the image to distinguish things properly. Each row re
 - Same as above, but instead of LayerNorm this uses RMSNorm without a learnable gain
 - Same as above, but the embedding learning rate is scaled correctly
 - Same as above, but the logits are scaled with the square root of the width of the network, rather than with the width as suggested by EleutherAI. This correction seems to be necessary due to us using untied unembedding matrix, whereas EleutherAI uses the same parameters for embedding and unembedding.
+
+As we can see, the transfer slowly improves with each modification, even though sometimes (eg in the case of RMSNorm), we loose some of the evaluation performance of the larger models.
 
 ## Getting started
 
