@@ -4,6 +4,8 @@ from dataclasses import dataclass
 class TransformerTrainingArgs:
     lr : float = 1e-3
     weight_decay : float = 1e-2
+    fix_weight_decay: bool = False
+    base_lr: float = 1e-3
     betas : tuple[float,float] = (0.9,0.999)
     wandb_project: str | None = "day1-demotransformer"
     wandb_name: str | None = None

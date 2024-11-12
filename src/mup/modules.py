@@ -28,6 +28,7 @@ class LayerNorm(nn.Module):
             # print("wb means:", self.w.mean().item(), self.b.mean().item())
             return residual * self.w + self.b
 
+
 class Embed(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
@@ -37,6 +38,7 @@ class Embed(nn.Module):
 
     def forward(self, tokens):
         return self.W_E[tokens]
+
 
 class PosEmbed(nn.Module):
     def __init__(self, cfg: Config):
@@ -48,6 +50,7 @@ class PosEmbed(nn.Module):
     def forward(self, tokens):
         batch, seq_len = tokens.shape
         return einops.repeat(self.W_pos[:seq_len], "seq d_model -> batch seq d_model", batch=batch)
+
 
 class Attention(nn.Module):
     def __init__(self, cfg: Config):
@@ -66,7 +69,7 @@ class Attention(nn.Module):
         else:
             attn_init_std = cfg.init_std
             proj_init_std = cfg.init_std / math.sqrt(2 * cfg.n_layers)
-        
+
         nn.init.normal_(self.W_Q, std=attn_init_std)
         nn.init.normal_(self.W_K, std=attn_init_std)
         nn.init.normal_(self.W_V, std=attn_init_std)
@@ -102,7 +105,7 @@ class Attention(nn.Module):
             q, k,
             "batch posn_Q nheads d_head, batch posn_K nheads d_head -> batch nheads posn_Q posn_K",
         )
-        
+
         if self.cfg.apply_muP:
             attn_scores /= self.cfg.d_head
         else:
@@ -120,7 +123,7 @@ class Attention(nn.Module):
         attn_out = (einops.einsum(
             z, self.W_O,
             "batch posn_Q nheads d_head, nheads d_head d_model -> batch posn_Q d_model",
-        ) + self.b_O) # Activation scaling
+        ) + self.b_O)  # Activation scaling
 
         return attn_out
 
@@ -129,6 +132,7 @@ class Attention(nn.Module):
         mask = t.triu(t.ones(attn_scores.size(-2), attn_scores.size(-1), device=attn_scores.device), diagonal=1).bool()
         attn_scores.masked_fill_(mask, self.IGNORE)
         return attn_scores
+
 
 class MLP(nn.Module):
     def __init__(self, cfg: Config):
@@ -161,6 +165,7 @@ class MLP(nn.Module):
 
         return mlp_out
 
+
 class TransformerBlock(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
@@ -179,6 +184,7 @@ class TransformerBlock(nn.Module):
 
         return resid_post
 
+
 class Unembed(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
@@ -188,13 +194,11 @@ class Unembed(nn.Module):
         self.b_U = nn.Parameter(t.zeros((cfg.d_vocab)), requires_grad=False)
 
     def forward(self, normalized_resid_final):
-
         logits = normalized_resid_final @ self.W_U + self.b_U
-        if self.cfg.fix_unembed:
-            logits = logits / self.cfg.muP_width_multiplier
 
         return logits
-    
+
+
 class DemoTransformer(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
@@ -204,21 +208,26 @@ class DemoTransformer(nn.Module):
         self.blocks = nn.ModuleList([TransformerBlock(cfg) for _ in range(cfg.n_layers)])
         self.ln_final = LayerNorm(cfg)
         self.unembed = Unembed(cfg)
-    
+
     def init_weights(self):
         pass
 
-    def configure_optimizers(self, weight_decay, learning_rate, betas=(0.9, 0.999), fix_embed_lr=False):
+    def configure_optimizers(self, weight_decay, learning_rate, betas=(0.9, 0.999), fix_embed_lr=False,
+                             fix_weight_decay=False, base_lr=1e-3):
         if self.cfg.apply_muP:
+            def get_wd(lr):
+                return weight_decay * base_lr / lr if fix_weight_decay else weight_decay
+
             mup_decay_params = []
             decay_params = []
             nodecay_params = []
 
-            embed_lr = learning_rate / sqrt(self.cfg.muP_width_multiplier) if fix_embed_lr else learning_rate / self.cfg.muP_width_multiplier
+            embed_lr = learning_rate / sqrt(
+                self.cfg.muP_width_multiplier) if fix_embed_lr else learning_rate / self.cfg.muP_width_multiplier
             decay_params.extend([self.embed.W_E, self.pos_embed.W_pos, self.unembed.W_U])
             for block in self.blocks:
                 mup_decay_params.extend([
-                     block.attn.W_Q, block.attn.W_K, block.attn.W_V, block.attn.W_O,
+                    block.attn.W_Q, block.attn.W_K, block.attn.W_V, block.attn.W_O,
                 ])
                 mup_decay_params.extend([block.mlp.W_in, block.mlp.W_out])
 
@@ -228,30 +237,34 @@ class DemoTransformer(nn.Module):
 
             nodecay_params.extend([self.ln_final.w, self.ln_final.b])
 
+            mup_lr = learning_rate / self.cfg.muP_width_multiplier
             optim_groups = [
-                {'params': mup_decay_params, 'weight_decay': weight_decay, 'lr': learning_rate/self.cfg.muP_width_multiplier},
-                {'params': decay_params, 'weight_decay': weight_decay, 'lr': embed_lr},
+                {'params': mup_decay_params, 'weight_decay': get_wd(mup_lr), 'lr': mup_lr},
+                {'params': decay_params, 'weight_decay': get_wd(embed_lr), 'lr': embed_lr},
                 {'params': nodecay_params, 'weight_decay': 0.0, 'lr': learning_rate}
             ]
             optimizer = t.optim.AdamW(optim_groups, betas=betas)
         else:
-            optimizer = t.optim.AdamW(self.parameters(),weight_decay=weight_decay, lr=learning_rate)
+            optimizer = t.optim.AdamW(self.parameters(), weight_decay=weight_decay, lr=learning_rate)
 
         return optimizer
-    
+
     def forward(self, tokens):
         residual = self.embed(tokens) + self.pos_embed(tokens)
 
         if self.cfg.apply_muP:
             residual *= self.cfg.mu_input_alpha
-        
+
         for block in self.blocks:
             residual = block(residual)
-        
+
         residual = self.ln_final(residual)
 
         if self.cfg.apply_muP:
-            residual *= self.cfg.mu_output_alpha / self.cfg.muP_width_multiplier
-        
+            if self.cfg.fix_unembed:
+                residual *= self.cfg.mu_output_alpha / sqrt(self.cfg.muP_width_multiplier)
+            else:
+                residual *= self.cfg.mu_output_alpha / self.cfg.muP_width_multiplier
+
         logits = self.unembed(residual)
         return logits

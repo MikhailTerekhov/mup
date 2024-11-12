@@ -42,6 +42,8 @@ def main(args):
         wandb_name += "+fixEmbedLR"
     if args.fix_unembed:
         wandb_name += "+fixUnembed"
+    if args.fix_weight_decay:
+        wandb_name += "+fixWD"
     wandb_name += f"_lr_{args.lr}"
     # Prepare training arguments
     training_args = TransformerTrainingArgs(
@@ -55,7 +57,9 @@ def main(args):
         # wandb_name=f"{args.wandb_run_prefix}_width_{args.width}_{'muP' if args.apply_muP else 'std'}_lr_{args.lr}",
         wandb_name=wandb_name,
         collect_norms=args.collect_norms,
-        fix_embed_lr=args.fix_embed_lr
+        fix_embed_lr=args.fix_embed_lr,
+        fix_weight_decay=args.fix_weight_decay,
+        base_lr=args.base_lr
     )
 
     # Instantiate the model and the trainer
@@ -90,6 +94,8 @@ if __name__ == "__main__":
     parser.add_argument('--fix_layernorm', action='store_true', help='Fix the layer norm params as suggested by u-mup.')
     parser.add_argument('--fix_embed_lr', action='store_true', help='Add a 1/sqrt(base_width/width) factor to the embedding LR as suggested by u-mup.')
     parser.add_argument('--fix_unembed', action='store_true', help='Add a factor of (base_width/width) to the logits after unembedding as suggested by the Eleuther blogpost.')
+    parser.add_argument('--fix_weight_decay', action='store_true', help='Makes weight decay independent of the lr, as suggested by Loshchilov & Hutter.')
+    parser.add_argument('--base_lr', type=float, default=1e-3, help='If --fix_weight_decay is set, the WD that torch receives is computed as weight_decay * base_lr / lr.')
 
     args = parser.parse_args()
 
