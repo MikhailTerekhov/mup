@@ -99,7 +99,7 @@ pre-commit run --all-files
 
 This project is licensed under the LICENSE file in the root directory of the project.
 
-The initial the implementation was done by Berke Argin.
+The initial mup implementation was done by Berke Argin.
 
 The initial code of this repository has been initiated by the [Python Machine Learning Research Project Template](https://github.com/CLAIRE-Labo/python-ml-research-template)
 with the LICENSE.ml-template file.
