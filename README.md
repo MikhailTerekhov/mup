@@ -2,7 +2,7 @@
 ## Overview
 This code provides a configurable implementation of muP with some of the tweaks proposed by [EleutherAI](https://blog.eleuther.ai/mutransfer/) and some of the tweaks taken from [unit-scale muP](https://arxiv.org/abs/2407.17465).
 
-The first version was implemented by Berke Argin.
+The first version was implemented by Berke Argin, you can find it [here](https://github.com/BerkeArgin/muP-autoregressive).
 
 With all tweaks applied, the optimal learning rate does seem to transfer between transformer sizes both for training and validation losses:
 ![transfer](images/mup_hyperparams.png)
