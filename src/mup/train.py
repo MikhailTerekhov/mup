@@ -59,7 +59,9 @@ def main(args):
         collect_norms=args.collect_norms,
         fix_embed_lr=args.fix_embed_lr,
         fix_weight_decay=args.fix_weight_decay,
-        base_lr=args.base_lr
+        base_lr=args.base_lr,
+        lr_scheduler=args.lr_scheduler,
+        lr_scheduler_warmup_frac=args.warmup_frac
     )
 
     # Instantiate the model and the trainer
@@ -96,6 +98,9 @@ if __name__ == "__main__":
     parser.add_argument('--fix_unembed', action='store_true', help='Add a factor of (base_width/width) to the logits after unembedding as suggested by the Eleuther blogpost.')
     parser.add_argument('--fix_weight_decay', action='store_true', help='Makes weight decay independent of the lr, as suggested by Loshchilov & Hutter.')
     parser.add_argument('--base_lr', type=float, default=1e-3, help='If --fix_weight_decay is set, the WD that torch receives is computed as weight_decay * base_lr / lr.')
+    parser.add_argument('--lr_scheduler', type=str, default=None, help='Learning rate scheduler to use. Only supports "cosine" for now, this is the cosine scheduler with linear warmup. If not set, lr is constant.')
+    parser.add_argument('--warmup_frac', type=float, default=0.03, help='Fraction of steps to warm up for if using a scheduler.')
+
 
     args = parser.parse_args()
 

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from dataclasses import dataclass
 
 @dataclass
@@ -14,6 +16,8 @@ class TransformerTrainingArgs:
     max_steps_per_epoch: int = -1
     collect_norms: bool = False
     fix_embed_lr: bool = False
+    lr_scheduler: Optional[str] = None
+    lr_scheduler_warmup_frac: float = 0.03
     
 
 @dataclass
