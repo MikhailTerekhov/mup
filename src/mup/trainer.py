@@ -43,7 +43,8 @@ class TransformerTrainer:
         self.args = args
         self.dataset_dict = dataset_dict
         
-        self.optimizer = model.configure_optimizers(args.weight_decay, args.lr, args.betas)
+        self.optimizer = model.configure_optimizers(args.weight_decay, args.lr, args.betas,
+                                                    fix_embed_lr=args.fix_embed_lr)
         self.step = 0
         if args.collect_norms:
             self.register_hooks()

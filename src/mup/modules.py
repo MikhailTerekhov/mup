@@ -1,5 +1,6 @@
 import math
 import einops
+from numpy import sqrt
 import torch as t
 import torch.nn as nn
 from params import Config
@@ -15,11 +16,17 @@ class LayerNorm(nn.Module):
         self.b = nn.Parameter(t.zeros(cfg.d_model), requires_grad=not cfg.fix_layernorm)
 
     def forward(self, residual):
-        residual_mean = residual.mean(dim=-1, keepdim=True)
-        residual_std = (residual.var(dim=-1, keepdim=True, unbiased=False) + self.cfg.layer_norm_eps).sqrt()
-        residual = (residual - residual_mean) / residual_std
-        # print("wb means:", self.w.mean().item(), self.b.mean().item())
-        return residual * self.w + self.b
+        if self.cfg.fix_layernorm:
+            # Fix from u-mup https://arxiv.org/pdf/2407.17465
+            # Use RMSNorm instead of LayerNorm, like LLaMA. Also, discard the gain parameter.
+            residual_sq_mean = residual.square().mean(dim=-1, keepdim=True)
+            return residual / (residual_sq_mean.sqrt() + self.cfg.layer_norm_eps)
+        else:
+            residual_mean = residual.mean(dim=-1, keepdim=True)
+            residual_std = (residual.var(dim=-1, keepdim=True, unbiased=False) + self.cfg.layer_norm_eps).sqrt()
+            residual = (residual - residual_mean) / residual_std
+            # print("wb means:", self.w.mean().item(), self.b.mean().item())
+            return residual * self.w + self.b
 
 class Embed(nn.Module):
     def __init__(self, cfg: Config):
@@ -183,6 +190,8 @@ class Unembed(nn.Module):
     def forward(self, normalized_resid_final):
 
         logits = normalized_resid_final @ self.W_U + self.b_U
+        if self.cfg.fix_unembed:
+            logits = logits / self.cfg.muP_width_multiplier
 
         return logits
     
@@ -199,12 +208,13 @@ class DemoTransformer(nn.Module):
     def init_weights(self):
         pass
 
-    def configure_optimizers(self, weight_decay, learning_rate, betas=(0.9, 0.999)):
+    def configure_optimizers(self, weight_decay, learning_rate, betas=(0.9, 0.999), fix_embed_lr=False):
         if self.cfg.apply_muP:
             mup_decay_params = []
             decay_params = []
             nodecay_params = []
 
+            embed_lr = learning_rate / sqrt(self.cfg.muP_width_multiplier) if fix_embed_lr else learning_rate / self.cfg.muP_width_multiplier
             decay_params.extend([self.embed.W_E, self.pos_embed.W_pos, self.unembed.W_U])
             for block in self.blocks:
                 mup_decay_params.extend([
@@ -220,7 +230,7 @@ class DemoTransformer(nn.Module):
 
             optim_groups = [
                 {'params': mup_decay_params, 'weight_decay': weight_decay, 'lr': learning_rate/self.cfg.muP_width_multiplier},
-                {'params': decay_params, 'weight_decay': weight_decay, 'lr': learning_rate/self.cfg.muP_width_multiplier},
+                {'params': decay_params, 'weight_decay': weight_decay, 'lr': embed_lr},
                 {'params': nodecay_params, 'weight_decay': 0.0, 'lr': learning_rate}
             ]
             optimizer = t.optim.AdamW(optim_groups, betas=betas)

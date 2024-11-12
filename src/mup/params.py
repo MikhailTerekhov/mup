@@ -11,6 +11,7 @@ class TransformerTrainingArgs:
     epochs: int= 20
     max_steps_per_epoch: int = -1
     collect_norms: bool = False
+    fix_embed_lr: bool = False
     
 
 @dataclass
@@ -20,6 +21,7 @@ class Config:
     layer_norm_eps: float = 1e-5
     apply_muP: bool = False
     fix_layernorm: bool = False
+    fix_unembed: bool = False
     d_vocab: int = 50257
     init_std: float = 0.02
     n_ctx: int = 1024

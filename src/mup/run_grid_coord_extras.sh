@@ -15,6 +15,6 @@ for lr in "${muP_learning_rates[@]}"; do
   # Loop over the widths
   for width in "${widths[@]}"; do
     # Run the Python script with the current configuration
-    python train.py --lr $lr --width $width --collect_norms --max_steps_per_epoch 10 --epochs 1 --fix_layernorm --wandb_project $wandb_project --wandb_run_prefix $wandb_run_prefix
+    python train.py --lr $lr --width $width --collect_norms --max_steps_per_epoch 10 --epochs 1 --wandb_project $wandb_project --wandb_run_prefix $wandb_run_prefix --apply_muP --fix_layernorm --fix_embed_lr --fix_unembed
   done
 done

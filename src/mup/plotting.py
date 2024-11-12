@@ -69,7 +69,7 @@ def plot_coord_summaries(history_dict, steps=range(0,10)):
     mups = df["muP"].unique()
 
     print(f"norm_cols: {norm_cols} lr: {lrs} mups: {mups}")
-    fig,axs = plt.subplots(len(mups),len(norm_cols), figsize=(30,10))
+    fig,axs = plt.subplots(len(mups),len(norm_cols), figsize=(30,30))
 
     lr_to_plot = sorted(list(set(lrs)))[len(set(lrs))//2]
     for i, col in enumerate(norm_cols):

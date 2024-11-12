@@ -21,6 +21,7 @@ def main(args):
         debug=False,
         apply_muP=args.apply_muP,
         fix_layernorm=args.fix_layernorm,
+        fix_unembed=args.fix_unembed,
         d_head=args.d_head,
         d_model=args.width,
         d_mlp=args.width * 4,
@@ -36,7 +37,11 @@ def main(args):
 
     wandb_name = f"{args.wandb_run_prefix}_width_{args.width}_{'muP' if args.apply_muP else 'std'}"
     if args.fix_layernorm:
-        wandb_name += "+fixLN"
+        wandb_name += "+fixRMS"
+    if args.fix_embed_lr:
+        wandb_name += "+fixEmbedLR"
+    if args.fix_unembed:
+        wandb_name += "+fixUnembed"
     wandb_name += f"_lr_{args.lr}"
     # Prepare training arguments
     training_args = TransformerTrainingArgs(
@@ -50,6 +55,7 @@ def main(args):
         # wandb_name=f"{args.wandb_run_prefix}_width_{args.width}_{'muP' if args.apply_muP else 'std'}_lr_{args.lr}",
         wandb_name=wandb_name,
         collect_norms=args.collect_norms,
+        fix_embed_lr=args.fix_embed_lr
     )
 
     # Instantiate the model and the trainer
@@ -82,6 +88,8 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_project", type=str, default="mup-transformer-training", help="The W&B project name.")
     parser.add_argument("--wandb_run_prefix", type=str, default="transformer_traintest", help="Prefix for the W&B run name.")
     parser.add_argument('--fix_layernorm', action='store_true', help='Fix the layer norm params as suggested by u-mup.')
+    parser.add_argument('--fix_embed_lr', action='store_true', help='Add a 1/sqrt(base_width/width) factor to the embedding LR as suggested by u-mup.')
+    parser.add_argument('--fix_unembed', action='store_true', help='Add a factor of (base_width/width) to the logits after unembedding as suggested by the Eleuther blogpost.')
 
     args = parser.parse_args()
 
