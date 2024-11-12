@@ -7,7 +7,7 @@ widths=(256 512 1024 2048)
 
 # Project and prefix settings
 wandb_project="mup-transformer-training"
-wandb_run_prefix="transformer_traintest"
+wandb_run_prefix="transformer_traintest_fix"
 
 # Loop over the learning rates
 for lr in "${muP_learning_rates[@]}"; do
