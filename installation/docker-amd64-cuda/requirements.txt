@@ -5,3 +5,4 @@ tqdm
 wandb
 pre-commit
 black
+git+https://github.com/TransformerLensOrg/TransformerLens
